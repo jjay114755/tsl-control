@@ -1,0 +1,61 @@
+name: Build TSL8 Restore iOS
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - 'Sources/**'
+      - 'Resources/**'
+      - 'Tests/**'
+      - 'web/**'
+      - 'project.yml'
+      - '.github/workflows/ios.yml'
+permissions:
+  contents: read
+jobs:
+  archive:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Test browser protocol against BIN fixtures
+        run: node --test Tests/*.test.mjs
+      - name: Compile and test native protocol and state machine
+        run: |
+          set -euo pipefail
+          swiftc -swift-version 5 -parse-as-library Sources/BLEProtocol.swift Sources/RestoreProtocol.swift Sources/BLEController.swift Sources/ControlModel.swift Tests/NativeTests.swift -o "$RUNNER_TEMP/restore-tests"
+          "$RUNNER_TEMP/restore-tests" Tests/fixtures/firmware_wire.json
+      - name: Install XcodeGen
+        run: brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
+      - name: Generate project
+        run: xcodegen generate
+      - name: Archive unsigned iPhone app
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          xcodebuild -project TSL8Restore.xcodeproj -scheme TSL8Restore \
+            -configuration Release -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/TSL8Restore.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO archive
+      - name: Package unsigned IPA
+        run: |
+          set -euo pipefail
+          mkdir -p build/Payload
+          ditto "$RUNNER_TEMP/TSL8Restore.xcarchive/Products/Applications/TSL8Restore.app" build/Payload/TSL8Restore.app
+          test -f build/Payload/TSL8Restore.app/TSL8Restore
+          plutil -lint build/Payload/TSL8Restore.app/Info.plist
+          (cd build && /usr/bin/zip -qr TSL8-Restore-unsigned.ipa Payload)
+          /usr/bin/unzip -t build/TSL8-Restore-unsigned.ipa
+          shasum -a 256 build/TSL8-Restore-unsigned.ipa > build/SHA256.txt
+          printf 'Commit: %s\nSigning: unsigned; requires separate signing before installation\nProtocol: D1/RSTD query, D2 OFF/A/B mode selection\n' "$GITHUB_SHA" > build/BUILD.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TSL8-Restore-unsigned
+          path: |
+            build/TSL8-Restore-unsigned.ipa
+            build/SHA256.txt
+            build/BUILD.txt
+          if-no-files-found: error
