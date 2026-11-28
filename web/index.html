@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TSL8 Restore</title><link rel="stylesheet" href="style.css"></head>
+<body><main><header><span class="eyebrow">TSL8 · 4.1.6</span><h1>Restore 模式</h1><p>连接模块，读取确认后切换。A 与 B 互斥。</p></header>
+<section><div class="bar"><h2 id="device">尚未连接模块</h2><span id="phase">未连接</span></div><p id="notice" role="status">Windows 请用 Chrome 或 Edge；iPhone 使用包内原生 iOS 工程。</p><div class="actions"><button id="connect">连接蓝牙设备</button><button class="secondary" id="disconnect" disabled>断开</button></div>
+<form id="auth" hidden><label for="password">模块蓝牙密码</label><input id="password" type="password" maxlength="8" autocomplete="off" placeholder="四字节密码"><button type="submit">验证并读取</button></form></section>
+<section><div class="bar"><h2>设备确认模式</h2><strong id="current">待确认</strong></div><div class="mode-row"><div><h3>A · 条件回送</h3><p>只回送低六位已经为 0x1B 的目标帧。</p></div><label class="switch"><input id="mode-a" type="checkbox" role="switch" aria-label="A 条件回送" disabled><span></span></label></div>
+<div class="mode-row"><div><h3>B · 字段覆盖</h3><p>将目标帧低六位设为 0x1B 后回送。</p></div><label class="switch"><input id="mode-b" type="checkbox" role="switch" aria-label="B 字段覆盖" disabled><span></span></label></div>
+<div class="actions"><button class="secondary" id="off" disabled>关闭 Restore</button><button class="secondary" id="refresh" disabled>重新读取</button></div><p class="note">重启后默认关闭。断开蓝牙不会关闭模块上的模式；切换中和状态未确认时暂停操作。</p></section>
+<section><div class="bar"><h2>运行诊断</h2><label><input id="poll" type="checkbox"> 每两秒读取</label></div><div id="metrics" class="metrics"></div><p class="note">数据为最近一次有效快照，状态待确认时不代表当前模式。原生返回 0 表示接口返回成功，不等于车辆接受。时间单位未校准。</p></section>
+<section><div class="bar"><h2>连接排查</h2><button class="secondary" id="export">导出日志</button></div><p>出现 RTD2 无效时，先导出日志，并核对下面的配套 BIN。请勿用搜索魔数的方式忽略无效快照。</p><p class="hash">本次配套 BIN SHA-256<br><code id="hash"></code></p><pre id="log" aria-label="最近连接事件"></pre></section>
+<footer>日志仅保存在当前页面，含通知原始数据，不含密码。关闭前请导出。A 为对照策略，不等于小王原版 LITE。</footer></main><script type="module" src="app.mjs"></script></body></html>
